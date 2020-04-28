@@ -12,18 +12,20 @@
 * 1. Keep track of visited and progress game.		x
 * 2. Change gamemode based on initial user input.	X
 * 3. Implement minmax AI for single player.
-* 4. Value check inputs at all points.
+* 4. Value check inputs at all points.				X
 */
 
 #include <iostream>
 #include <sstream>
 #include <limits>
 #include <set>
+#include <utility>
 #include <math.h>
+#include <unistd.h>
 
 using namespace std;
 
-class Board 
+class Board
 {
 		int board[9];
 		int winner;
@@ -31,16 +33,24 @@ class Board
 	public:
 		Board()
 		{
-			for(int i = 0; i < 10; ++i)
+			for(int i = 0; i < 9; i++)
 			{
 				board[i] = i+3;
 			}
 			winner = -1;
 		}
 
-		int[] get_board()
+		Board(int _board[])
 		{
-			return & board;
+			for(int i = 0; i < 9; i++)
+			{
+				board[i] = _board[i];
+			}
+		}
+
+		int* get_board()
+		{
+			return board;
 		}
 
 		bool is_winner()
@@ -101,12 +111,12 @@ class Board
 					count++;
 				}
 			}
-			
+
 			if(count == 9)
 			{
 				return true;
 			}
-			else 
+			else
 			{
 				return false;
 			}
@@ -114,7 +124,7 @@ class Board
 
 		string convert_board_value(int val)
 		{
-			if(val == 1) 
+			if(val == 1)
 			{
 				return "X";
 			}
@@ -123,7 +133,7 @@ class Board
 				return "O";
 			}
 			else
-			{ 
+			{
 				return " ";
 			}
 		}
@@ -145,7 +155,7 @@ class Board
 			cout << "   " << convert_board_value(board[6]) << "   |" <<"   " << convert_board_value(board[7]) << "   |" <<"   " << convert_board_value(board[8]) << "   " << endl;
 			cout << "       |       |       " << endl;
 			cout << endl;
-		}	
+		}
 
 		int get_winner()
 		{
@@ -159,8 +169,8 @@ void game_play(int game_mode);
 void game_multiplayer();
 void game_singleplayer();
 bool set_contains_val(int val, set<int> visited);
-int best_move(Board &game_board, int current_player);
-int minimax(Board &game_board, int depth, bool maximizing, int current_player);
+int minmax(int game_board[], set<int> spots_taken, int current_player);
+int minmax2(int game_board[], int current_player);
 
 int main ()
 {
@@ -171,7 +181,7 @@ int main ()
 	game_play(mode);
 }
 
-int game_intro() 
+int game_intro()
 {
 	cout << "Let's Play Tic-Tac-Toe" << endl;
 	cout << "======================\n" << endl;
@@ -189,7 +199,7 @@ int game_intro()
 		{
 			cout << "Invalid input, please try again:";
 			cin.clear();
-			cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+			cin.ignore(numeric_limits<streamsize>::max(), '\n');
 		}
 		cout << endl;
 	}
@@ -227,7 +237,7 @@ void game_play(int game_mode)
 	{
 		game_singleplayer();
 	}
-	else 
+	else
 	{
 		game_multiplayer();
 	}
@@ -250,7 +260,7 @@ void game_multiplayer()
 			{
 				cout << "Invalid input, please try again:";
 				cin.clear();
-				cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			}
 		}
 
@@ -264,14 +274,14 @@ void game_multiplayer()
 				{
 					cout << "Invalid input, please try again:";
 					cin.clear();
-					cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+					cin.ignore(numeric_limits<streamsize>::max(), '\n');
 				}
 
-				if(set_contains_val(player_move, visited) || (player_move < 1 || player_move > 9)) 
+				if(set_contains_val(player_move, visited) || (player_move < 1 || player_move > 9))
 				{
 					cout << "\n### Spot already marked or invalid input. ###\n" << endl;
 					player_move = -1;
-				} 
+				}
 				else
 				{
 					visited.insert(player_move);
@@ -283,10 +293,10 @@ void game_multiplayer()
 			game_board.display_board();
 
 			//switch current player
-			if(current_player == 1) 
+			if(current_player == 1)
 			{
 				current_player = 2;
-			} 
+			}
 			else if (current_player == 2)
 			{
 				current_player = 1;
@@ -320,9 +330,9 @@ void game_singleplayer()
 	{
 		Board game_board;
 		int player_move = -1;
-		int ai_move = -1;
 		set<int> visited;
 
+		// WHILE LOOP: Control whole game and allow for multiple games played.
 		int current_player = -1;
 		while(!(current_player == 1 || current_player == 2))
 		{
@@ -331,12 +341,14 @@ void game_singleplayer()
 			{
 				cout << "Invalid input, please try again:";
 				cin.clear();
-				cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+				cin.ignore(numeric_limits<streamsize>::max(), '\n');
 			}
 		}
-
+		// WHILE LOOP: Allow player to make move and update board.
+		//			   Alternate between players as game progresses.
 		while(!game_board.is_winner() && !game_board.is_full())
 		{
+			// Player 1 (HUMAN) takes player move, updates board, and updates visited spots.
 			if(current_player == 1)
 			{
 				//take player move
@@ -347,14 +359,14 @@ void game_singleplayer()
 					{
 						cout << "Invalid input, please try again:";
 						cin.clear();
-						cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
+						cin.ignore(numeric_limits<streamsize>::max(), '\n');
 					}
 
-					if(set_contains_val(player_move, visited) || (player_move < 1 || player_move > 9)) 
+					if(set_contains_val(player_move, visited) || (player_move < 1 || player_move > 9))
 					{
 						cout << "\n### Spot already marked or invalid input. ###\n" << endl;
 						player_move = -1;
-					} 
+					}
 					else
 					{
 						visited.insert(player_move);
@@ -363,31 +375,217 @@ void game_singleplayer()
 
 				game_board.update_board(current_player, player_move);
 			}
+			// Player 2 (AI) calculates best score of possible moves using minmax, updates board and visited spots.
 			else
 			{
 				// ###	AI PLAYER MIN MAX  ###
-				ai_move = best_move(&game_board.board, current_player);
-				game_board.update_board(current_player, ai_move);
+				int high_score = -INFINITY;
+				int best_move;
+				for(int i = 0; i < 9; i++)
+				{
+					if(!set_contains_val(i+1,visited))
+					{
+						game_board.update_board(current_player, i+1);
+						// int score = minmax(game_board.get_board(), visited, current_player);
+						int score = minmax2(game_board.get_board(), current_player);
 
+						game_board.update_board(i+3, i+1);
+
+						if(score > high_score)
+						{
+							high_score = score;
+							best_move = i+1;
+						}
+					}
+				}
+
+				usleep(1500000);
+
+				cout << "Player 2 has chosen location " << best_move << "." << endl;
+				game_board.update_board(current_player, best_move);
+				visited.insert(best_move);
 			}
 
+			// BELOW: Display board, alternate player, and check for winner.
+
+			game_board.display_board();
+
+			//switch current player
+			if(current_player == 1)
+			{
+				current_player = 2;
+			}
+			else if (current_player == 2)
+			{
+				current_player = 1;
+			}
+
+			//reset player move
+			player_move = -1;
+
+			//check for winner
+			if(game_board.is_winner())
+			{
+				cout << "Player " << game_board.get_winner() << " wins the game!" << endl;
+			}
+			else if (game_board.is_full())
+			{
+				cout << "Game board is full with no winners. Better luck next time!" << endl;
+			}
 		}
 
-		game_board.display_board();
+		//OUTSIDE GAME LOOP: continue play or not
+		cout << "Continue playing, Y or N?:";
+		cin >> continue_game;
+	}
 
-		//switch current player
-		if(current_player == 1) 
+	cout << "\nThanks for playing!" << endl;
+}
+
+int minmax(int game_board[], set<int> spots_taken, int current_player)
+{
+	Board curr_board(game_board);
+	set<int> visited = spots_taken;
+
+	if(curr_board.is_winner() && curr_board.get_winner() == 2)
+	{
+		if(current_player == 2)
 		{
-			current_player = 2;
-		} 
-		else if (current_player == 2)
-		{
-			current_player = 1;
+			return 1;
 		}
+		else
+		{
+			return -1;
+		}
+	}
+	else if (curr_board.is_winner() && curr_board.get_winner() == 1)
+	{
+		if(current_player == 1)
+		{
+			return 1;
+		}
+		else
+		{
+			return -1;
+		}
+	}
+	else if(!curr_board.is_winner() && curr_board.is_full())
+	{
+		return 0;
+	}
 
-		//reset player move
-		player_move = -1;
-		ai_move = -1;
+	int score_for_move = 0;
+
+	//MAXIMIZING
+	if(current_player == 2)
+	{
+		int score = -100;
+		for(int i = 0; i < 9; i++)
+		{
+			if(!set_contains_val(i+1,visited))
+			{
+				curr_board.update_board(current_player,i+1);
+				visited.insert(i+1);
+
+				score_for_move = minmax(curr_board.get_board(), visited, 1);
+				if(score_for_move > score)
+				{
+					score = score_for_move;
+				}
+			}
+		}
+		return score;
+	}
+	//MINIMIZING
+	else
+	{
+		int score = 100;
+		for(int i = 0; i < 9; i++)
+		{
+			if(!set_contains_val(i+1,visited))
+			{
+				curr_board.update_board(current_player,i+1);
+				visited.insert(i+1);
+
+				score_for_move = minmax(curr_board.get_board(), visited, 2);
+				if(score_for_move < score)
+				{
+					score = score_for_move;
+				}
+			}
+		}
+		return score;
+	}
+}
+
+int minmax2(int game_board[], int current_player)
+{
+	Board curr_board(game_board);
+
+	if(curr_board.is_winner() && curr_board.get_winner() == 2)
+	{
+		return 1;
+	}
+	else if (curr_board.is_winner() && curr_board.get_winner() == 1)
+	{
+		return -1;
+	}
+	else if(!curr_board.is_winner() && curr_board.is_full())
+	{
+		return 0;
+	}
+
+	//MAXIMIZING
+	if(current_player == 2)
+	{
+		int score = -INFINITY;
+		for(int i = 0; i < 9; i++)
+		{
+			if(curr_board.get_board()[i] == i+3)
+			{
+				//Add move to board.
+				curr_board.update_board(current_player,i+1);
+
+				//Calculate score for updated board.
+				int score_for_move = minmax2(curr_board.get_board(), 1);
+
+				//Remove move from board.
+				curr_board.update_board(i+3,i+1);
+
+				//Check if new high score.
+				if(score_for_move > score)
+				{
+					score = score_for_move;
+				}
+			}
+		}
+		return score;
+	}
+	//MINIMIZING
+	else
+	{
+		int score = INFINITY;
+		for(int i = 0; i < 9; i++)
+		{
+			if(curr_board.get_board()[i] == i+3)
+			{
+				//Add move to board.
+				curr_board.update_board(current_player,i+1);
+
+				//Calculate score for updated board.
+				int score_for_move = minmax2(curr_board.get_board(), 2);
+
+				//Remove move from board.
+				curr_board.update_board(i+3,i+1);
+
+				//Check if new high score.
+				if(score_for_move < score)
+				{
+					score = score_for_move;
+				}
+			}
+		}
+		return score;
 	}
 }
 
@@ -403,81 +601,3 @@ bool set_contains_val(int val, set<int> visited)
 	return false;
 }
 
-int best_move(Board &game_board, int current_player)
-{
-	int best_score = -INFINITY;
-	int move;
-	int temp;
-	for(int i = 0; i < 9; i++)
-	{
-		if(game_board.board[i] != 0 && game_board.board[i] != 1)
-		{
-			temp = game_board.board[i];
-			game_board.board[i] = current_player;
-		}
-		int score = minimax(&game_board, depth, false, current_player);
-		game_board.board[i] = temp;
-		if(score > best_score)
-		{
-			best_score = score;
-			move = i;
-		}
-	}
-	game_board.board[move] = current_player;
-}
-
-int minimax(Board &game_board, int depth, bool maximizing, int current_player)
-{
-	//Check if winner exists
-	if(game_board.is_winner())
-	{
-		if(game_board.winner == current_player)
-		{
-			return 1;
-		}
-		else 
-		{
-			return 0;
-		}
-	}
-
-	if(maximizing)
-	{
-		int best_score = -INFINITY;
-		for(int i = 0; i < 9; i++)
-		{
-			if(game_board.board[i] != 0 && game_board.board[i] != 1)
-			{
-				temp = game_board.board[i];
-				game_board.board[i] = current_player;
-			}
-			int score = minimax(&game_board, depth+1, false, current_player%2+1);
-			game_board.board[i] = temp;
-			if(score > best_score)
-			{
-				best_score = score;
-				move = i;
-			}
-		}
-	}
-	else
-	{
-		int best_score = -INFINITY;
-		for(int i = 0; i < 9; i++)
-		{
-			if(game_board.board[i] != 0 && game_board.board[i] != 1)
-			{
-				temp = game_board.board[i];
-				game_board.board[i] = current_player;
-			}
-			int score = minimax(&game_board, depth+1, true, current_player%2+1);
-			game_board.board[i] = temp;
-			if(score < best_score)
-			{
-				best_score = score;
-				move = i;
-			}
-		}
-	}
-	return best_score;
-}
