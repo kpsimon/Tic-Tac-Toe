@@ -11,7 +11,7 @@
 /*
 * 1. Keep track of visited and progress game.		x
 * 2. Change gamemode based on initial user input.	X
-* 3. Implement minmax AI for single player.
+* 3. Implement minmax AI for single player.			X
 * 4. Value check inputs at all points.				X
 */
 
@@ -169,8 +169,7 @@ void game_play(int game_mode);
 void game_multiplayer();
 void game_singleplayer();
 bool set_contains_val(int val, set<int> visited);
-int minmax(int game_board[], set<int> spots_taken, int current_player);
-int minmax2(int game_board[], int current_player);
+int minmax(Board game_board, int depth, int current_player);
 
 int main ()
 {
@@ -387,7 +386,7 @@ void game_singleplayer()
 					{
 						game_board.update_board(current_player, i+1);
 						// int score = minmax(game_board.get_board(), visited, current_player);
-						int score = minmax2(game_board.get_board(), current_player);
+						int score = minmax(game_board, 0, current_player);
 
 						game_board.update_board(i+3, i+1);
 
@@ -442,95 +441,17 @@ void game_singleplayer()
 	cout << "\nThanks for playing!" << endl;
 }
 
-int minmax(int game_board[], set<int> spots_taken, int current_player)
+int minmax(Board game_board, int depth, int current_player)
 {
-	Board curr_board(game_board);
-	set<int> visited = spots_taken;
-
-	if(curr_board.is_winner() && curr_board.get_winner() == 2)
+	if(game_board.is_winner() && game_board.get_winner() == 2)
 	{
-		if(current_player == 2)
-		{
-			return 1;
-		}
-		else
-		{
-			return -1;
-		}
+		return 10 - depth;
 	}
-	else if (curr_board.is_winner() && curr_board.get_winner() == 1)
+	else if (game_board.is_winner() && game_board.get_winner() == 1)
 	{
-		if(current_player == 1)
-		{
-			return 1;
-		}
-		else
-		{
-			return -1;
-		}
+		return -10 + depth;
 	}
-	else if(!curr_board.is_winner() && curr_board.is_full())
-	{
-		return 0;
-	}
-
-	int score_for_move = 0;
-
-	//MAXIMIZING
-	if(current_player == 2)
-	{
-		int score = -100;
-		for(int i = 0; i < 9; i++)
-		{
-			if(!set_contains_val(i+1,visited))
-			{
-				curr_board.update_board(current_player,i+1);
-				visited.insert(i+1);
-
-				score_for_move = minmax(curr_board.get_board(), visited, 1);
-				if(score_for_move > score)
-				{
-					score = score_for_move;
-				}
-			}
-		}
-		return score;
-	}
-	//MINIMIZING
-	else
-	{
-		int score = 100;
-		for(int i = 0; i < 9; i++)
-		{
-			if(!set_contains_val(i+1,visited))
-			{
-				curr_board.update_board(current_player,i+1);
-				visited.insert(i+1);
-
-				score_for_move = minmax(curr_board.get_board(), visited, 2);
-				if(score_for_move < score)
-				{
-					score = score_for_move;
-				}
-			}
-		}
-		return score;
-	}
-}
-
-int minmax2(int game_board[], int current_player)
-{
-	Board curr_board(game_board);
-
-	if(curr_board.is_winner() && curr_board.get_winner() == 2)
-	{
-		return 1;
-	}
-	else if (curr_board.is_winner() && curr_board.get_winner() == 1)
-	{
-		return -1;
-	}
-	else if(!curr_board.is_winner() && curr_board.is_full())
+	else if(!game_board.is_winner() && game_board.is_full())
 	{
 		return 0;
 	}
@@ -538,19 +459,19 @@ int minmax2(int game_board[], int current_player)
 	//MAXIMIZING
 	if(current_player == 2)
 	{
-		int score = -INFINITY;
+		int score = -10;
 		for(int i = 0; i < 9; i++)
 		{
-			if(curr_board.get_board()[i] == i+3)
+			if(game_board.get_board()[i] == i+3)
 			{
 				//Add move to board.
-				curr_board.update_board(current_player,i+1);
+				game_board.update_board(current_player,i+1);
 
 				//Calculate score for updated board.
-				int score_for_move = minmax2(curr_board.get_board(), 1);
+				int score_for_move = minmax(game_board.get_board(), depth + 1, 1);
 
 				//Remove move from board.
-				curr_board.update_board(i+3,i+1);
+				game_board.update_board(i+3,i+1);
 
 				//Check if new high score.
 				if(score_for_move > score)
@@ -564,19 +485,19 @@ int minmax2(int game_board[], int current_player)
 	//MINIMIZING
 	else
 	{
-		int score = INFINITY;
+		int score = 10;
 		for(int i = 0; i < 9; i++)
 		{
-			if(curr_board.get_board()[i] == i+3)
+			if(game_board.get_board()[i] == i+3)
 			{
 				//Add move to board.
-				curr_board.update_board(current_player,i+1);
+				game_board.update_board(current_player,i+1);
 
 				//Calculate score for updated board.
-				int score_for_move = minmax2(curr_board.get_board(), 2);
+				int score_for_move = minmax(game_board.get_board(), depth + 1, 2);
 
 				//Remove move from board.
-				curr_board.update_board(i+3,i+1);
+				game_board.update_board(i+3,i+1);
 
 				//Check if new high score.
 				if(score_for_move < score)
