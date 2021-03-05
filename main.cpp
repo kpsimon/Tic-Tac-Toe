@@ -386,7 +386,7 @@ void game_singleplayer()
 					{
 						game_board.update_board(current_player, i+1);
 						// int score = minmax(game_board.get_board(), visited, current_player);
-						int score = minmax(game_board, 0, current_player);
+						int score = minmax(game_board, 0, 1);
 
 						game_board.update_board(i+3, i+1);
 
@@ -449,7 +449,7 @@ int minmax(Board game_board, int depth, int current_player)
 	}
 	else if (game_board.is_winner() && game_board.get_winner() == 1)
 	{
-		return -10 + depth;
+		return -20 + depth;
 	}
 	else if(!game_board.is_winner() && game_board.is_full())
 	{
